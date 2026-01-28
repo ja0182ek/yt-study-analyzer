@@ -7,7 +7,6 @@ import { VocabPieChart } from '@/components/dashboard/VocabPieChart';
 import { AnalysisReport } from '@/components/dashboard/AnalysisReport';
 import { Card } from '@/components/ui/Card';
 import { analyzeTranscripts } from '@/lib/transcriptAnalyzer';
-import { fetchTranscriptsClient } from '@/lib/clientTranscript';
 import {
   WatchHistoryEntry,
   WeeklyChartData,
@@ -159,28 +158,31 @@ export default function Dashboard() {
       const totalMinutes = chartData.reduce((sum, d) => sum + d.minutes, 0);
       const totalVideos = chartData.reduce((sum, d) => sum + d.videos, 0);
 
-      // Step 3: 字幕を取得して分析（クライアントサイドで実行）
+      // Step 3: 字幕を取得して分析（Invidious API経由）
       setLoadingStatus('字幕を取得中...');
 
       const transcriptsToAnalyze: string[] = [];
-      const videoIdsForTranscript = uniqueVideoIds.slice(0, 15); // 最大15件（クライアントサイドなので少なめに）
+      const videoIdsForTranscript = uniqueVideoIds.slice(0, 20);
 
       if (videoIdsForTranscript.length > 0) {
         try {
-          // クライアントサイドで字幕を取得（ユーザーのブラウザから直接YouTubeにアクセス）
-          const transcriptResults = await fetchTranscriptsClient(
-            videoIdsForTranscript,
-            (current, total) => {
-              setLoadingStatus(`字幕を取得中... (${current}/${total})`);
-            }
-          );
-
-          // 取得した字幕を配列に追加
-          transcriptResults.forEach((transcript, videoId) => {
-            if (transcript) {
-              transcriptsToAnalyze.push(transcript);
-            }
+          const transcriptResponse = await fetch('/api/transcript', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ videoIds: videoIdsForTranscript }),
           });
+
+          const transcriptResult = await transcriptResponse.json();
+
+          if (transcriptResult.success && transcriptResult.data) {
+            transcriptResult.data.forEach(
+              (item: { videoId: string; transcript: string | null }) => {
+                if (item.transcript) {
+                  transcriptsToAnalyze.push(item.transcript);
+                }
+              }
+            );
+          }
 
           console.log(`Fetched ${transcriptsToAnalyze.length} transcripts from ${videoIdsForTranscript.length} videos`);
         } catch (transcriptError) {
