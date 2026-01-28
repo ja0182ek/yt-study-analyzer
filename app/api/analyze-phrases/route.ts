@@ -56,6 +56,13 @@ interface ParsedPhrase {
   category: string;
 }
 
+interface VocabularyTheme {
+  theme: string;
+  themeEmoji: string;
+  keywords: string[];
+  insight: string;
+}
+
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const body = await request.json();
@@ -65,6 +72,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({
         success: true,
         data: FALLBACK_PHRASES,
+        vocabularyThemes: [],
         source: 'fallback',
       });
     }
@@ -76,6 +84,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({
         success: true,
         data: FALLBACK_PHRASES,
+        vocabularyThemes: [],
         source: 'fallback',
       });
     }
@@ -89,13 +98,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       const limitedTitles = titles.slice(0, 100);
       const titlesText = limitedTitles.join('\n');
 
-      const prompt = `あなたは幼児英語教育の専門家です。以下は子供がYouTube Kidsで視聴した動画のタイトル一覧です。
+      const prompt = `あなたは幼児英語教育の専門家です。以下は子供が直近7日間にYouTube Kidsで視聴した動画のタイトル一覧です。
 
-これらの動画タイトルから、子供が「実際によく耳にしていたはず」のフレーズを5つ抽出してください。
-教科書的に正しい英語ではなく、YouTube動画で実際によく流れているフレーズを選んでください。
-
-【動画タイトル一覧】
+【動画タイトル一覧（直近7日間）】
 ${titlesText}
+
+上記を分析し、以下の2つを抽出してください：
+
+1. 【習得フレーズ】子供が「実際によく耳にしていたはず」の決まり文句（フレーズ）を5つ
+2. 【語彙テーマ】今週よく触れていた英単語のテーマ分析
 
 以下のJSON形式で回答してください。他のテキストは含めないでください。
 
@@ -104,13 +115,21 @@ ${titlesText}
     {
       "phrase": "（英語のフレーズ。2-6語程度。動画で実際に聞こえてくるフレーズ）",
       "japanese": "（日本語訳）",
-      "background": "（このフレーズがどんな場面で流れるか。親が『あ、これ動画で聞いた！』と思えるような説明）",
+      "background": "（このフレーズがどんな場面で流れるか。親が『あ、これ動画で聞いた！』と思えるような具体的説明）",
       "category": "（探す・発見する、物語の王道、疑問と観察、感情・気遣い、意気込み・誘い のいずれか）"
+    }
+  ],
+  "vocabularyThemes": [
+    {
+      "theme": "（テーマ名：動物、色、感情、数字、食べ物、乗り物、自然、体のパーツ など）",
+      "themeEmoji": "（テーマに合った絵文字1つ）",
+      "keywords": ["（そのテーマに関連する英単語を3-5個）"],
+      "insight": "（このテーマについて親へのワンポイントアドバイス。30文字以内）"
     }
   ]
 }
 
-【カテゴリの選択肢】
+【フレーズカテゴリの選択肢】
 1. 探す・発見する（かくれんぼ、宝探し、Where are you?など）
 2. 物語の王道（おとぎ話、Once upon a time、The endなど）
 3. 疑問と観察（質問、実験、What's this?など）
@@ -120,7 +139,8 @@ ${titlesText}
 【重要】
 - 動画タイトルに含まれるキーワードから、その動画で流れているであろうフレーズを推測してください
 - 子供向けYouTube動画の定番フレーズを優先してください
-- 親御さんが「あ、これ動画で流れてた！」と一致感を持てるフレーズを選んでください`;
+- 語彙テーマは動画タイトルから最も頻出するテーマを3つ抽出してください
+- 親御さんが「あ、これ動画で聞いた！」と一致感を持てる内容にしてください`;
 
       const result = await model.generateContent(prompt);
       const response = result.response;
@@ -133,17 +153,22 @@ ${titlesText}
         return NextResponse.json({
           success: true,
           data: FALLBACK_PHRASES,
+          vocabularyThemes: [],
           source: 'fallback',
         });
       }
 
-      const parsed = JSON.parse(jsonMatch[0]) as { phrases: ParsedPhrase[] };
+      const parsed = JSON.parse(jsonMatch[0]) as {
+        phrases: ParsedPhrase[];
+        vocabularyThemes?: VocabularyTheme[];
+      };
 
       if (!parsed.phrases || !Array.isArray(parsed.phrases) || parsed.phrases.length === 0) {
         console.error('Gemini response missing phrases array:', parsed);
         return NextResponse.json({
           success: true,
           data: FALLBACK_PHRASES,
+          vocabularyThemes: [],
           source: 'fallback',
         });
       }
@@ -157,6 +182,7 @@ ${titlesText}
       return NextResponse.json({
         success: true,
         data: phrasesWithEmoji,
+        vocabularyThemes: parsed.vocabularyThemes || [],
         source: 'gemini',
       });
     } catch (aiError) {
@@ -164,6 +190,7 @@ ${titlesText}
       return NextResponse.json({
         success: true,
         data: FALLBACK_PHRASES,
+        vocabularyThemes: [],
         source: 'fallback',
       });
     }
@@ -172,6 +199,7 @@ ${titlesText}
     return NextResponse.json({
       success: true,
       data: FALLBACK_PHRASES,
+      vocabularyThemes: [],
       source: 'fallback',
     });
   }
