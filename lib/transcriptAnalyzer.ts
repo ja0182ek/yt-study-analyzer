@@ -1,0 +1,450 @@
+import {
+  VocabDistribution,
+  WordFrequency,
+  PhraseFrequency,
+  AnalysisReport,
+  VocabLevel,
+  WordCategory,
+  CategoryWords,
+} from '@/types';
+import { getVocabLevel } from './dolchList';
+
+// カテゴリ別の単語リスト
+const CATEGORY_WORDS: Record<WordCategory, { label: string; emoji: string; words: Set<string> }> = {
+  colors: {
+    label: '色',
+    emoji: '🎨',
+    words: new Set([
+      'red', 'blue', 'green', 'yellow', 'orange', 'purple', 'pink', 'black', 'white', 'brown',
+      'gray', 'grey', 'gold', 'silver', 'rainbow', 'colorful', 'color', 'colours', 'bright', 'dark',
+    ]),
+  },
+  animals: {
+    label: '動物',
+    emoji: '🐾',
+    words: new Set([
+      'dog', 'cat', 'bird', 'fish', 'rabbit', 'bunny', 'bear', 'lion', 'tiger', 'elephant',
+      'monkey', 'horse', 'cow', 'pig', 'sheep', 'duck', 'chicken', 'frog', 'butterfly', 'bee',
+      'dinosaur', 'dragon', 'unicorn', 'puppy', 'kitten', 'mouse', 'snake', 'turtle', 'penguin', 'panda',
+      'giraffe', 'zebra', 'wolf', 'fox', 'owl', 'dolphin', 'shark', 'whale', 'octopus', 'crab',
+    ]),
+  },
+  food: {
+    label: '食べ物',
+    emoji: '🍎',
+    words: new Set([
+      'apple', 'banana', 'orange', 'strawberry', 'grape', 'watermelon', 'cake', 'cookie', 'candy', 'chocolate',
+      'ice', 'cream', 'pizza', 'bread', 'milk', 'juice', 'water', 'egg', 'cheese', 'fruit',
+      'vegetable', 'carrot', 'tomato', 'potato', 'corn', 'rice', 'noodle', 'soup', 'sandwich', 'breakfast',
+      'lunch', 'dinner', 'snack', 'yummy', 'delicious', 'hungry', 'eat', 'drink', 'taste', 'sweet',
+    ]),
+  },
+  bodyParts: {
+    label: '体の部位',
+    emoji: '🖐️',
+    words: new Set([
+      'head', 'face', 'eye', 'eyes', 'nose', 'mouth', 'ear', 'ears', 'hair', 'hand', 'hands',
+      'finger', 'fingers', 'arm', 'arms', 'leg', 'legs', 'foot', 'feet', 'toe', 'toes',
+      'body', 'heart', 'tummy', 'belly', 'shoulder', 'knee', 'elbow', 'neck', 'teeth', 'tongue',
+    ]),
+  },
+  family: {
+    label: '家族',
+    emoji: '👨‍👩‍👧‍👦',
+    words: new Set([
+      'mom', 'mommy', 'mother', 'dad', 'daddy', 'father', 'baby', 'brother', 'sister', 'grandma',
+      'grandpa', 'grandmother', 'grandfather', 'family', 'parent', 'parents', 'kids', 'children', 'child', 'son',
+      'daughter', 'aunt', 'uncle', 'cousin', 'friend', 'friends', 'boy', 'girl', 'man', 'woman',
+    ]),
+  },
+  princess: {
+    label: 'おとぎ話',
+    emoji: '👸',
+    words: new Set([
+      'princess', 'prince', 'queen', 'king', 'castle', 'palace', 'crown', 'fairy', 'magic', 'magical',
+      'witch', 'wizard', 'dragon', 'knight', 'hero', 'mermaid', 'unicorn', 'spell', 'wand', 'treasure',
+      'kingdom', 'royal', 'dress', 'gown', 'ball', 'dance', 'happily', 'ever', 'after', 'dream',
+      'wish', 'beautiful', 'handsome', 'brave', 'adventure', 'story', 'tale', 'once', 'upon', 'mirror',
+    ]),
+  },
+  vehicles: {
+    label: '乗り物',
+    emoji: '🚗',
+    words: new Set([
+      'car', 'cars', 'truck', 'bus', 'train', 'plane', 'airplane', 'helicopter', 'boat', 'ship',
+      'bike', 'bicycle', 'motorcycle', 'rocket', 'spaceship', 'tractor', 'ambulance', 'fire', 'police', 'taxi',
+      'wheel', 'wheels', 'drive', 'ride', 'fly', 'fast', 'speed', 'engine', 'road', 'street',
+    ]),
+  },
+  nature: {
+    label: '自然・時間',
+    emoji: '🌳',
+    words: new Set([
+      'sun', 'moon', 'star', 'stars', 'sky', 'cloud', 'clouds', 'rain', 'rainbow', 'snow',
+      'tree', 'flower', 'grass', 'leaf', 'leaves', 'plant', 'garden', 'forest', 'mountain', 'river',
+      'ocean', 'sea', 'beach', 'sand', 'rock', 'water', 'wind', 'weather', 'spring', 'summer',
+      'fall', 'autumn', 'winter', 'night', 'day', 'morning', 'afternoon', 'evening', 'sunshine', 'storm',
+      'time', 'today', 'tomorrow', 'yesterday', 'week', 'month', 'year', 'hour', 'minute', 'second',
+    ]),
+  },
+  toys: {
+    label: 'おもちゃ・遊び',
+    emoji: '🧸',
+    words: new Set([
+      'toy', 'toys', 'ball', 'doll', 'teddy', 'block', 'blocks', 'puzzle', 'game', 'play',
+      'playground', 'swing', 'slide', 'balloon', 'balloon', 'robot', 'lego', 'playdoh', 'crayon', 'draw',
+      'paint', 'color', 'sing', 'song', 'dance', 'music', 'fun', 'laugh', 'smile',
+      'party', 'birthday', 'present', 'gift', 'surprise', 'hide', 'seek', 'jump', 'run', 'catch',
+    ]),
+  },
+  feelings: {
+    label: '気持ち',
+    emoji: '💖',
+    words: new Set([
+      'love', 'like', 'happy', 'sad', 'angry', 'scared', 'afraid', 'excited', 'surprised', 'tired',
+      'sleepy', 'hungry', 'thirsty', 'sick', 'hurt', 'feel', 'feeling', 'feelings', 'cry', 'miss',
+      'sorry', 'thank', 'thanks', 'please', 'help', 'nice', 'kind', 'good', 'bad', 'great',
+      'wonderful', 'amazing', 'awesome', 'cool', 'silly', 'funny', 'proud', 'brave', 'shy', 'lonely',
+    ]),
+  },
+  actions: {
+    label: '動作',
+    emoji: '🏃',
+    words: new Set([
+      'show', 'way', 'tell', 'say', 'talk', 'ask', 'answer', 'think', 'learn', 'teach',
+      'read', 'write', 'count', 'try', 'find', 'give', 'take', 'put', 'pick', 'hold',
+      'open', 'close', 'push', 'pull', 'turn', 'move', 'stop', 'start', 'wait', 'watch',
+      'listen', 'hear', 'call', 'bring', 'carry', 'throw', 'kick', 'hit', 'clap', 'wave',
+      'walk', 'climb', 'swim', 'sleep', 'wake', 'sit', 'stand', 'clean', 'wash', 'brush',
+    ]),
+  },
+  size: {
+    label: '大きさ・様子',
+    emoji: '📏',
+    words: new Set([
+      'little', 'big', 'small', 'large', 'tiny', 'huge', 'tall', 'short', 'long', 'wide',
+      'high', 'low', 'fat', 'thin', 'round', 'square', 'new', 'old', 'young', 'soft',
+      'hard', 'hot', 'cold', 'warm', 'cool', 'wet', 'dry', 'clean', 'dirty', 'full',
+      'empty', 'heavy', 'light', 'fast', 'slow', 'loud', 'quiet', 'strong', 'weak', 'same',
+    ]),
+  },
+};
+
+/**
+ * テキストを単語に分割（英語）
+ */
+function tokenize(text: string): string[] {
+  // 小文字化して、単語以外の文字で分割
+  return text
+    .toLowerCase()
+    .replace(/['']/g, "'") // スマートクォートを標準化
+    .split(/[^a-z']+/)
+    .filter(word => word.length > 0 && word !== "'");
+}
+
+/**
+ * 単語の頻度をカウント
+ */
+export function countWordFrequencies(transcript: string): Map<string, number> {
+  const words = tokenize(transcript);
+  const frequencies = new Map<string, number>();
+
+  words.forEach(word => {
+    const count = frequencies.get(word) || 0;
+    frequencies.set(word, count + 1);
+  });
+
+  return frequencies;
+}
+
+
+/**
+ * 語彙レベル分布を計算
+ */
+export function calculateVocabDistribution(
+  wordFrequencies: Map<string, number>
+): VocabDistribution[] {
+  const levelCounts: Record<VocabLevel, number> = {
+    'Pre-K': 0,
+    'K': 0,
+    '1st': 0,
+    '2nd': 0,
+    '3rd': 0,
+    'Noun': 0,
+    'Other': 0,
+  };
+
+  let totalCount = 0;
+
+  wordFrequencies.forEach((count, word) => {
+    const level = getVocabLevel(word) as VocabLevel;
+    levelCounts[level] += count;
+    totalCount += count;
+  });
+
+  const distribution: VocabDistribution[] = Object.entries(levelCounts).map(
+    ([level, count]) => ({
+      level: level as VocabLevel,
+      count,
+      percentage: totalCount > 0 ? (count / totalCount) * 100 : 0,
+    })
+  );
+
+  return distribution;
+}
+
+/**
+ * 上位N件の単語を取得（ストップワード除外）
+ */
+export function getTopWords(
+  wordFrequencies: Map<string, number>,
+  topN: number = 10
+): WordFrequency[] {
+  // 除外するストップワード
+  const stopWords = new Set([
+    'i', 'me', 'my', 'we', 'our', 'you', 'your', 'he', 'she', 'it', 'they', 'them',
+    'a', 'an', 'the', 'this', 'that', 'these', 'those',
+    'is', 'am', 'are', 'was', 'were', 'be', 'been', 'being',
+    'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
+    'and', 'or', 'but', 'if', 'so', 'as', 'of', 'at', 'by', 'for', 'with', 'to', 'in', 'on',
+    'not', 'no', 'yes', 'can', 'just', 'now', 'then', 'here', 'there', 'what', 'when', 'where', 'who', 'how', 'why',
+    'all', 'some', 'any', 'much', 'many', 'more', 'most', 'other', 'into', 'over', 'after', 'before',
+    'up', 'down', 'out', 'off', 'about', 'again', 'also', 'back', 'only', 'own', 'same', 'than',
+    'too', 'very', 'well', 'even', 'still', 'such', 'because', 'through', 'while', 'during',
+    'let', 'us', 'oh', 'gonna', 'got', 'get', 'go', 'going', 'come', 'know', 'see', 'like', 'want', 'make',
+    're', 'look', 'her', 'him', 'his', 'its',
+    // 数字・感嘆詞・短縮形の残骸
+    'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
+    'doo', 'll', 've', 't', 's', 'd', 'm',
+    'yeah', 'yay', 'wow', 'hey', 'uh', 'um', 'ah', 'ooh', 'whoa', 'huh', 'hmm', 'ha', 'la', 'na', 'da',
+    // HTMLエンティティの残骸
+    'amp', 'gt', 'lt', 'quot', 'apos', 'nbsp', 'rsquo', 'lsquo', 'rdquo', 'ldquo', 'ndash', 'mdash',
+    // その他不要な単語
+    'okay', 'ok', 'don', 'won', 'didn', 'doesn', 'isn', 'aren', 'wasn', 'weren', 'couldn', 'wouldn', 'shouldn',
+  ]);
+
+  const sorted = Array.from(wordFrequencies.entries())
+    .filter(([word]) => !stopWords.has(word) && word.length > 1)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, topN);
+
+  return sorted.map(([word, count]) => {
+    // カテゴリを検索
+    let category: string | undefined;
+    let categoryEmoji: string | undefined;
+    for (const [, catConfig] of Object.entries(CATEGORY_WORDS)) {
+      if (catConfig.words.has(word)) {
+        category = catConfig.label;
+        categoryEmoji = catConfig.emoji;
+        break;
+      }
+    }
+
+    return {
+      word,
+      count,
+      level: getVocabLevel(word) as VocabLevel,
+      category,
+      categoryEmoji,
+    };
+  });
+}
+
+/**
+ * フォールバック用のデフォルトフレーズを取得
+ * AIフレーズ分析が使用できない場合に使用
+ */
+export function getDefaultPhrases(): PhraseFrequency[] {
+  // 鉄板フレーズリストからデフォルト5件を返す
+  const defaultPhrases: PhraseFrequency[] = [
+    {
+      phrase: 'Once upon a time',
+      count: 1,
+      category: '物語の王道',
+      categoryEmoji: '🏰',
+      meaning: 'むかしむかし',
+      scene: 'おとぎ話の冒頭で必ず使われる定番フレーズです',
+    },
+    {
+      phrase: 'Look at this',
+      count: 1,
+      category: '疑問と観察',
+      categoryEmoji: '🔬',
+      meaning: 'これを見て',
+      scene: '注目させたい物を紹介する時の定番です',
+    },
+    {
+      phrase: 'What happens next',
+      count: 1,
+      category: '疑問と観察',
+      categoryEmoji: '🔬',
+      meaning: '次は何が起こるかな？',
+      scene: '実験動画や物語で続きを予想させる時に使います',
+    },
+    {
+      phrase: "Don't be afraid",
+      count: 1,
+      category: '感情・気遣い',
+      categoryEmoji: '💖',
+      meaning: '怖がらないで',
+      scene: '怖がっている相手を勇気づける表現です',
+    },
+    {
+      phrase: "Let's play",
+      count: 1,
+      category: '意気込み・誘い',
+      categoryEmoji: '🎉',
+      meaning: '遊ぼう！',
+      scene: '遊びに誘う時の基本フレーズです',
+    },
+  ];
+
+  return defaultPhrases;
+}
+
+/**
+ * 分析結果からアドバイスを生成
+ */
+function generateAdvice(
+  vocabDistribution: VocabDistribution[],
+  topWords: WordFrequency[]
+): string[] {
+  const advice: string[] = [];
+
+  // 語彙レベルの分析
+  const dolchTotal = vocabDistribution
+    .filter(d => d.level !== 'Other')
+    .reduce((sum, d) => sum + d.count, 0);
+  const otherCount = vocabDistribution.find(d => d.level === 'Other')?.count || 0;
+  const total = dolchTotal + otherCount;
+
+  if (total === 0) {
+    return ['字幕データが取得できませんでした。字幕付きの動画を視聴するとより詳しい分析ができます。'];
+  }
+
+  const dolchPercentage = (dolchTotal / total) * 100;
+
+  if (dolchPercentage >= 70) {
+    advice.push('基本的な語彙（Dolch Words）の割合が高く、初心者向けの動画を視聴しています。');
+  } else if (dolchPercentage >= 50) {
+    advice.push('基本語彙と発展語彙がバランスよく含まれています。');
+  } else {
+    advice.push('発展的な語彙が多く含まれる動画を視聴しています。お子さまのレベルに合っているか確認してください。');
+  }
+
+  // Pre-K, K レベルの比率
+  const beginnerLevels = vocabDistribution
+    .filter(d => d.level === 'Pre-K' || d.level === 'K')
+    .reduce((sum, d) => sum + d.count, 0);
+  const beginnerPercentage = (beginnerLevels / total) * 100;
+
+  if (beginnerPercentage >= 40) {
+    advice.push('最も基礎的な単語が多く使われており、英語初心者のお子さまに適しています。');
+  }
+
+  // 頻出単語についてのアドバイス
+  const dolchWords = topWords.filter(w => w.level !== 'Other');
+  if (dolchWords.length >= 5) {
+    const levels = dolchWords.slice(0, 5).map(w => w.level);
+    const uniqueLevels = new Set(levels);
+    if (uniqueLevels.size <= 2) {
+      advice.push('頻出単語が特定のレベルに集中しています。様々なレベルの動画を見るとバランスよく学習できます。');
+    }
+  }
+
+  // 名詞の使用について
+  const nounCount = vocabDistribution.find(d => d.level === 'Noun')?.count || 0;
+  const nounPercentage = (nounCount / total) * 100;
+  if (nounPercentage >= 10) {
+    advice.push('具体的な名詞が多く含まれており、語彙を増やすのに役立ちます。');
+  }
+
+  return advice;
+}
+
+/**
+ * カテゴリ別に単語を分類して取得
+ */
+function getCategoryWords(
+  wordFrequencies: Map<string, number>,
+  topN: number = 5
+): CategoryWords[] {
+  const result: CategoryWords[] = [];
+
+  for (const [category, config] of Object.entries(CATEGORY_WORDS)) {
+    const categoryWordList: WordFrequency[] = [];
+
+    for (const [word, count] of wordFrequencies.entries()) {
+      if (config.words.has(word)) {
+        categoryWordList.push({
+          word,
+          count,
+          level: getVocabLevel(word) as VocabLevel,
+        });
+      }
+    }
+
+    // カウント順にソートして上位N件を取得
+    categoryWordList.sort((a, b) => b.count - a.count);
+    const topCategoryWords = categoryWordList.slice(0, topN);
+
+    if (topCategoryWords.length > 0) {
+      result.push({
+        category: category as WordCategory,
+        label: config.label,
+        emoji: config.emoji,
+        words: topCategoryWords,
+      });
+    }
+  }
+
+  // 単語数が多いカテゴリ順にソート
+  result.sort((a, b) => {
+    const totalA = a.words.reduce((sum, w) => sum + w.count, 0);
+    const totalB = b.words.reduce((sum, w) => sum + w.count, 0);
+    return totalB - totalA;
+  });
+
+  return result;
+}
+
+/**
+ * 複数の字幕テキストを分析してレポートを生成
+ * 注意: フレーズ分析はAI APIで行われ、page.tsxで上書きされます
+ */
+export function analyzeTranscripts(transcripts: string[]): AnalysisReport {
+  // 全テキストを結合
+  const combinedText = transcripts.join(' ');
+
+  // 単語頻度
+  const wordFrequencies = countWordFrequencies(combinedText);
+
+  // 語彙分布
+  const vocabDistribution = calculateVocabDistribution(wordFrequencies);
+
+  // 上位単語
+  const topWords = getTopWords(wordFrequencies, 10);
+
+  // カテゴリ別単語
+  const categoryWords = getCategoryWords(wordFrequencies, 5);
+
+  // フレーズ（デフォルト値、AI分析結果で上書きされる）
+  const topPhrases = getDefaultPhrases();
+
+  // 統計
+  const totalWords = Array.from(wordFrequencies.values()).reduce((sum, count) => sum + count, 0);
+  const uniqueWords = wordFrequencies.size;
+
+  // アドバイス生成
+  const advice = generateAdvice(vocabDistribution, topWords);
+
+  return {
+    topWords,
+    categoryWords,
+    topPhrases,
+    vocabDistribution,
+    totalWords,
+    uniqueWords,
+    advice,
+  };
+}

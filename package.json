@@ -1,0 +1,37 @@
+{
+  "name": "yt-study-analyzer",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^3.0.21",
+    "@eslint/eslintrc": "^3.3.3",
+    "@google/generative-ai": "^0.24.1",
+    "@types/react": "^19.2.10",
+    "@types/react-dom": "^19.2.3",
+    "ai": "^6.0.57",
+    "autoprefixer": "^10.4.23",
+    "lucide-react": "^0.563.0",
+    "next": "^14.2.35",
+    "postcss": "^8.5.6",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "recharts": "^3.7.0",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.9.3",
+    "youtube-caption-extractor": "^1.9.1",
+    "youtube-transcript": "^1.2.1",
+    "youtube-transcript-plus": "^1.1.2",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.10",
+    "eslint": "^9.39.2",
+    "eslint-config-next": "^16.1.6"
+  }
+}
