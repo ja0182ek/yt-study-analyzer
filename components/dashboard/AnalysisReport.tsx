@@ -35,7 +35,11 @@ export function AnalysisReport({ report, weeklyAdvice, stats }: AnalysisReportPr
       params.set('totalMinutes', stats.totalMinutes.toString());
       params.set('uniqueWords', stats.uniqueWords.toString());
     }
-    // 聞いたフレーズTOP3
+    // 単語TOP3
+    if (report.topWords[0]) params.set('word1', report.topWords[0].word);
+    if (report.topWords[1]) params.set('word2', report.topWords[1].word);
+    if (report.topWords[2]) params.set('word3', report.topWords[2].word);
+    // フレーズTOP3
     if (report.topPhrases[0]) params.set('phrase1', report.topPhrases[0].phrase);
     if (report.topPhrases[1]) params.set('phrase2', report.topPhrases[1].phrase);
     if (report.topPhrases[2]) params.set('phrase3', report.topPhrases[2].phrase);

@@ -7,6 +7,9 @@ interface SharePageProps {
     focusPhraseJapanese?: string;
     totalMinutes?: string;
     uniqueWords?: string;
+    word1?: string;
+    word2?: string;
+    word3?: string;
     phrase1?: string;
     phrase2?: string;
     phrase3?: string;
@@ -25,6 +28,11 @@ export async function generateMetadata({ searchParams }: SharePageProps): Promis
   if (params.focusPhraseJapanese) ogParams.set('focusPhraseJapanese', params.focusPhraseJapanese);
   if (params.totalMinutes) ogParams.set('totalMinutes', params.totalMinutes);
   if (params.uniqueWords) ogParams.set('uniqueWords', params.uniqueWords);
+  // 単語TOP3
+  if (params.word1) ogParams.set('word1', params.word1);
+  if (params.word2) ogParams.set('word2', params.word2);
+  if (params.word3) ogParams.set('word3', params.word3);
+  // フレーズTOP3
   if (params.phrase1) ogParams.set('phrase1', params.phrase1);
   if (params.phrase2) ogParams.set('phrase2', params.phrase2);
   if (params.phrase3) ogParams.set('phrase3', params.phrase3);
@@ -64,6 +72,11 @@ export default async function SharePage({ searchParams }: SharePageProps) {
   const totalMinutes = params.totalMinutes || '0';
   const uniqueWords = params.uniqueWords || '0';
 
+  // 単語TOP3
+  const words = [params.word1, params.word2, params.word3].filter(Boolean);
+  // フレーズTOP3
+  const phrases = [params.phrase1, params.phrase2, params.phrase3].filter(Boolean);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 to-blue-50 flex flex-col items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl p-8 max-w-lg w-full text-center">
@@ -88,6 +101,34 @@ export default async function SharePage({ searchParams }: SharePageProps) {
             <p className="text-2xl font-bold text-purple-600">{uniqueWords}</p>
             <p className="text-sm text-gray-500">触れた単語数</p>
           </div>
+        </div>
+
+        {/* 単語TOP3 と フレーズTOP3 */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          {words.length > 0 && (
+            <div className="bg-green-50 rounded-lg p-4">
+              <p className="text-sm text-green-600 font-medium mb-2">📚 単語TOP3</p>
+              <div className="space-y-1">
+                {words.map((word, i) => (
+                  <p key={word} className="text-gray-700">
+                    {i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'} {word}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+          {phrases.length > 0 && (
+            <div className="bg-gray-50 rounded-lg p-4">
+              <p className="text-sm text-gray-600 font-medium mb-2">👂 フレーズTOP3</p>
+              <div className="space-y-1">
+                {phrases.map((phrase, i) => (
+                  <p key={phrase} className="text-gray-700 text-sm">
+                    {i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'} {phrase}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <Link
