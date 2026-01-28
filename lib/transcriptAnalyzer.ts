@@ -194,37 +194,109 @@ export function calculateVocabDistribution(
 }
 
 /**
+ * 単語が有効な英単語かチェック（母音を含むか）
+ */
+function isValidEnglishWord(word: string): boolean {
+  // 母音を含むかチェック（y も母音として扱う）
+  const hasVowel = /[aeiouy]/i.test(word);
+  // 子音のみの組み合わせは除外
+  if (!hasVowel) return false;
+  // 同じ文字が3回以上連続する場合は除外（例: "aaa", "ooo"）
+  if (/(.)\1{2,}/.test(word)) return false;
+  // 数字を含む場合は除外
+  if (/\d/.test(word)) return false;
+  return true;
+}
+
+/**
  * 上位N件の単語を取得（ストップワード除外）
  */
 export function getTopWords(
   wordFrequencies: Map<string, number>,
   topN: number = 10
 ): WordFrequency[] {
-  // 除外するストップワード
+  // 除外するストップワード（拡張版）
   const stopWords = new Set([
-    'i', 'me', 'my', 'we', 'our', 'you', 'your', 'he', 'she', 'it', 'they', 'them',
+    // 代名詞
+    'i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves',
+    'you', 'your', 'yours', 'yourself', 'yourselves',
+    'he', 'him', 'his', 'himself', 'she', 'her', 'hers', 'herself',
+    'it', 'its', 'itself', 'they', 'them', 'their', 'theirs', 'themselves',
+    // 冠詞・指示詞
     'a', 'an', 'the', 'this', 'that', 'these', 'those',
+    // be動詞
     'is', 'am', 'are', 'was', 'were', 'be', 'been', 'being',
-    'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
+    // 助動詞
+    'have', 'has', 'had', 'having', 'do', 'does', 'did', 'doing',
+    'will', 'would', 'could', 'should', 'may', 'might', 'must', 'shall', 'can',
+    // 接続詞・前置詞
     'and', 'or', 'but', 'if', 'so', 'as', 'of', 'at', 'by', 'for', 'with', 'to', 'in', 'on',
-    'not', 'no', 'yes', 'can', 'just', 'now', 'then', 'here', 'there', 'what', 'when', 'where', 'who', 'how', 'why',
-    'all', 'some', 'any', 'much', 'many', 'more', 'most', 'other', 'into', 'over', 'after', 'before',
-    'up', 'down', 'out', 'off', 'about', 'again', 'also', 'back', 'only', 'own', 'same', 'than',
-    'too', 'very', 'well', 'even', 'still', 'such', 'because', 'through', 'while', 'during',
-    'let', 'us', 'oh', 'gonna', 'got', 'get', 'go', 'going', 'come', 'know', 'see', 'like', 'want', 'make',
-    're', 'look', 'her', 'him', 'his', 'its',
-    // 数字・感嘆詞・短縮形の残骸
+    'from', 'into', 'onto', 'upon', 'about', 'above', 'below', 'between', 'under', 'over',
+    'through', 'during', 'before', 'after', 'around', 'among', 'along', 'across', 'behind',
+    // 副詞・その他機能語
+    'not', 'no', 'yes', 'just', 'now', 'then', 'here', 'there', 'very', 'really', 'quite',
+    'what', 'when', 'where', 'who', 'whom', 'whose', 'which', 'how', 'why',
+    'all', 'some', 'any', 'much', 'many', 'more', 'most', 'other', 'another', 'each', 'every',
+    'up', 'down', 'out', 'off', 'away', 'again', 'also', 'back', 'only', 'own', 'same', 'than',
+    'too', 'well', 'even', 'still', 'such', 'because', 'while', 'although', 'though',
+    // 基本動詞
+    'let', 'lets', 'us', 'gonna', 'gotta', 'wanna', 'got', 'get', 'gets', 'getting',
+    'go', 'goes', 'going', 'went', 'gone', 'come', 'comes', 'coming', 'came',
+    'know', 'knows', 'knowing', 'knew', 'known',
+    'see', 'sees', 'seeing', 'saw', 'seen',
+    'like', 'likes', 'liking', 'liked',
+    'want', 'wants', 'wanting', 'wanted',
+    'make', 'makes', 'making', 'made',
+    'take', 'takes', 'taking', 'took', 'taken',
+    'put', 'puts', 'putting',
+    'say', 'says', 'saying', 'said',
+    'tell', 'tells', 'telling', 'told',
+    'think', 'thinks', 'thinking', 'thought',
+    'look', 'looks', 'looking', 'looked',
+    'use', 'uses', 'using', 'used',
+    'give', 'gives', 'giving', 'gave', 'given',
+    'need', 'needs', 'needing', 'needed',
+    'try', 'tries', 'trying', 'tried',
+    // 短縮形の残骸
+    're', 'll', 've', 't', 's', 'd', 'm', 'n',
+    'don', 'won', 'didn', 'doesn', 'isn', 'aren', 'wasn', 'weren',
+    'couldn', 'wouldn', 'shouldn', 'hasn', 'hadn', 'haven',
+    'ain', 'cant', 'wont', 'dont', 'im', 'youre', 'theyre', 'weve', 'thats', 'whats',
+    // 感嘆詞・フィラー
+    'oh', 'ah', 'uh', 'um', 'er', 'eh', 'hm', 'hmm', 'huh', 'ha', 'haha', 'hehe',
+    'wow', 'whoa', 'yay', 'yea', 'yeah', 'yep', 'nope', 'nah',
+    'hey', 'hi', 'hello', 'bye', 'goodbye',
+    'okay', 'ok', 'alright', 'right',
+    // 歌詞でよく出る意味のない音
+    'la', 'na', 'da', 'ba', 'pa', 'ta', 'fa', 'ma', 'ra', 'wa', 'ya', 'za',
+    'doo', 'boo', 'woo', 'loo', 'moo', 'poo', 'too', 'zoo',
+    'dee', 'bee', 'fee', 'gee', 'lee', 'pee', 'tee', 'wee', 'zee',
+    'ooh', 'aah', 'eee', 'ooo',
+    // 数字
     'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
-    'doo', 'll', 've', 't', 's', 'd', 'm',
-    'yeah', 'yay', 'wow', 'hey', 'uh', 'um', 'ah', 'ooh', 'whoa', 'huh', 'hmm', 'ha', 'la', 'na', 'da',
+    'first', 'second', 'third',
     // HTMLエンティティの残骸
     'amp', 'gt', 'lt', 'quot', 'apos', 'nbsp', 'rsquo', 'lsquo', 'rdquo', 'ldquo', 'ndash', 'mdash',
-    // その他不要な単語
-    'okay', 'ok', 'don', 'won', 'didn', 'doesn', 'isn', 'aren', 'wasn', 'weren', 'couldn', 'wouldn', 'shouldn',
+    // 自動生成字幕でよく出る誤認識
+    'musi', 'mus', 'ktick', 'tic', 'tik', 'applause', 'laughter', 'music',
+    // その他
+    'thing', 'things', 'something', 'anything', 'nothing', 'everything',
+    'way', 'ways', 'time', 'times', 'day', 'days', 'year', 'years',
+    'people', 'person', 'man', 'men', 'woman', 'women',
+    'life', 'world', 'part', 'place', 'case', 'point', 'fact',
+    'being', 'having', 'getting', 'going', 'coming', 'doing', 'making', 'taking',
   ]);
 
   const sorted = Array.from(wordFrequencies.entries())
-    .filter(([word]) => !stopWords.has(word) && word.length > 1)
+    .filter(([word]) => {
+      // ストップワードは除外
+      if (stopWords.has(word)) return false;
+      // 3文字未満は除外
+      if (word.length < 3) return false;
+      // 有効な英単語かチェック
+      if (!isValidEnglishWord(word)) return false;
+      return true;
+    })
     .sort((a, b) => b[1] - a[1])
     .slice(0, topN);
 
