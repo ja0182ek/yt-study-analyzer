@@ -7,26 +7,48 @@ import { AnalysisReport as AnalysisReportType, WeeklyAdvice } from '@/types';
 interface AnalysisReportProps {
   report: AnalysisReportType;
   weeklyAdvice: WeeklyAdvice | null;
+  stats?: {
+    totalMinutes: number;
+    uniqueWords: number;
+  };
 }
 
-export function AnalysisReport({ report, weeklyAdvice }: AnalysisReportProps) {
+export function AnalysisReport({ report, weeklyAdvice, stats }: AnalysisReportProps) {
   // Twitter共有用のテキストを生成
   const generateShareText = () => {
-    if (!weeklyAdvice) return '';
-
-    const topPhrase = report.topPhrases[0]?.phrase || weeklyAdvice.focusPhrase;
     return encodeURIComponent(
-      `今週聞いたフレーズ: "${topPhrase}"\n\n` +
-      `お子様がYouTubeでよく耳にしていた魔法の言葉です ✨\n\n` +
+      `ただ動画を見てるだけだと思ってたのに、こんなに英語を浴びてたなんて…！😭\n\n` +
       `#YouTube学習分析 #おうち英語 #子供英語`
     );
   };
 
+  // 共有ページURLを生成
+  const generateSharePageUrl = () => {
+    if (typeof window === 'undefined') return '';
+
+    const params = new URLSearchParams();
+    if (weeklyAdvice) {
+      params.set('focusPhrase', weeklyAdvice.focusPhrase);
+      params.set('focusPhraseJapanese', weeklyAdvice.focusPhraseJapanese);
+    }
+    if (stats) {
+      params.set('totalMinutes', stats.totalMinutes.toString());
+      params.set('uniqueWords', stats.uniqueWords.toString());
+    }
+    // 聞いたフレーズTOP3
+    if (report.topPhrases[0]) params.set('phrase1', report.topPhrases[0].phrase);
+    if (report.topPhrases[1]) params.set('phrase2', report.topPhrases[1].phrase);
+    if (report.topPhrases[2]) params.set('phrase3', report.topPhrases[2].phrase);
+
+    return `${window.location.origin}/share?${params.toString()}`;
+  };
+
   const handleTwitterShare = () => {
     const text = generateShareText();
-    const url = encodeURIComponent(window.location.href);
+    const sharePageUrl = generateSharePageUrl();
+    const shareUrl = encodeURIComponent(sharePageUrl);
     window.open(
-      `https://twitter.com/intent/tweet?text=${text}&url=${url}`,
+      `https://twitter.com/intent/tweet?text=${text}&url=${shareUrl}`,
       '_blank',
       'width=550,height=420'
     );

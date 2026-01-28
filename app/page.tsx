@@ -274,6 +274,7 @@ export default function Dashboard() {
         totalVideos,
         totalMinutes,
         analyzedVideos: transcriptsToAnalyze.length,
+        uniqueWords: report.uniqueWords,
       });
 
       setLoadingStatus('');
@@ -315,13 +316,18 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* 統計サマリー（無料プラン：総視聴時間のみ） */}
+      {/* 統計サマリー */}
       {stats && (
-        <div className="flex justify-center mb-8">
-          <Card className="text-center card-hover px-12">
+        <div className="flex justify-center gap-4 mb-8">
+          <Card className="text-center card-hover px-8">
             <Clock className="h-8 w-8 text-blue-500 mx-auto mb-2" />
             <p className="text-3xl font-bold text-gray-800">{stats.totalMinutes}</p>
             <p className="text-sm text-gray-500">総視聴時間（分）</p>
+          </Card>
+          <Card className="text-center card-hover px-8">
+            <BookOpen className="h-8 w-8 text-purple-500 mx-auto mb-2" />
+            <p className="text-3xl font-bold text-gray-800">{stats.uniqueWords.toLocaleString()}</p>
+            <p className="text-sm text-gray-500">触れた単語数（種類）</p>
           </Card>
         </div>
       )}
@@ -353,7 +359,7 @@ export default function Dashboard() {
             <FileText className="h-6 w-6 text-primary" />
             <span>詳細分析レポート</span>
           </h2>
-          <AnalysisReport report={analysisReport} weeklyAdvice={weeklyAdvice} />
+          <AnalysisReport report={analysisReport} weeklyAdvice={weeklyAdvice} stats={stats ? { totalMinutes: stats.totalMinutes, uniqueWords: stats.uniqueWords } : undefined} />
         </div>
       )}
 
