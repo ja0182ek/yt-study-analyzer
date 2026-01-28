@@ -40,8 +40,8 @@ export function VocabPieChart({ data }: VocabPieChartProps) {
   }));
 
   return (
-    <div className="w-full h-72">
-      <ResponsiveContainer width="100%" height="100%">
+    <div className="w-full h-72" style={{ minHeight: '288px' }}>
+      <ResponsiveContainer width="100%" height="100%" minHeight={288}>
         <PieChart>
           <Pie
             data={chartData}
