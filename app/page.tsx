@@ -7,6 +7,7 @@ import { VocabPieChart } from '@/components/dashboard/VocabPieChart';
 import { AnalysisReport } from '@/components/dashboard/AnalysisReport';
 import { Card } from '@/components/ui/Card';
 import { analyzeTranscripts } from '@/lib/transcriptAnalyzer';
+import { fetchTranscriptsClient } from '@/lib/clientTranscript';
 import {
   WatchHistoryEntry,
   WeeklyChartData,
@@ -158,31 +159,30 @@ export default function Dashboard() {
       const totalMinutes = chartData.reduce((sum, d) => sum + d.minutes, 0);
       const totalVideos = chartData.reduce((sum, d) => sum + d.videos, 0);
 
-      // Step 3: 字幕を取得して分析
-      setLoadingStatus('字幕を分析中...');
+      // Step 3: 字幕を取得して分析（クライアントサイドで実行）
+      setLoadingStatus('字幕を取得中...');
 
       const transcriptsToAnalyze: string[] = [];
-      const videoIdsForTranscript = uniqueVideoIds.slice(0, 20); // 最大20件
+      const videoIdsForTranscript = uniqueVideoIds.slice(0, 15); // 最大15件（クライアントサイドなので少なめに）
 
       if (videoIdsForTranscript.length > 0) {
         try {
-          const transcriptResponse = await fetch('/api/transcript', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ videoIds: videoIdsForTranscript }),
+          // クライアントサイドで字幕を取得（ユーザーのブラウザから直接YouTubeにアクセス）
+          const transcriptResults = await fetchTranscriptsClient(
+            videoIdsForTranscript,
+            (current, total) => {
+              setLoadingStatus(`字幕を取得中... (${current}/${total})`);
+            }
+          );
+
+          // 取得した字幕を配列に追加
+          transcriptResults.forEach((transcript, videoId) => {
+            if (transcript) {
+              transcriptsToAnalyze.push(transcript);
+            }
           });
 
-          const transcriptResult = await transcriptResponse.json();
-
-          if (transcriptResult.success && transcriptResult.data) {
-            transcriptResult.data.forEach(
-              (item: { videoId: string; transcript: string | null }) => {
-                if (item.transcript) {
-                  transcriptsToAnalyze.push(item.transcript);
-                }
-              }
-            );
-          }
+          console.log(`Fetched ${transcriptsToAnalyze.length} transcripts from ${videoIdsForTranscript.length} videos`);
         } catch (transcriptError) {
           console.warn('Failed to fetch transcripts:', transcriptError);
         }
@@ -191,13 +191,14 @@ export default function Dashboard() {
       // 字幕が取得できなかった場合、動画タイトルをフォールバックとして使用
       if (transcriptsToAnalyze.length === 0) {
         console.log('No transcripts available, using video titles as fallback');
-        // 動画タイトルから英語部分を抽出して分析
         const titleTexts = parsedEntries
           .slice(0, 100)
           .map((entry) => entry.title)
           .join(' ');
         transcriptsToAnalyze.push(titleTexts);
       }
+
+      setLoadingStatus('字幕を分析中...');
 
       // 字幕分析（単語分析用）
       const report = analyzeTranscripts(transcriptsToAnalyze);
