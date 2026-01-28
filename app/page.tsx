@@ -188,6 +188,17 @@ export default function Dashboard() {
         }
       }
 
+      // 字幕が取得できなかった場合、動画タイトルをフォールバックとして使用
+      if (transcriptsToAnalyze.length === 0) {
+        console.log('No transcripts available, using video titles as fallback');
+        // 動画タイトルから英語部分を抽出して分析
+        const titleTexts = parsedEntries
+          .slice(0, 100)
+          .map((entry) => entry.title)
+          .join(' ');
+        transcriptsToAnalyze.push(titleTexts);
+      }
+
       // 字幕分析（単語分析用）
       const report = analyzeTranscripts(transcriptsToAnalyze);
 
