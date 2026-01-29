@@ -257,11 +257,20 @@ export function getTopWords(
     'give', 'gives', 'giving', 'gave', 'given',
     'need', 'needs', 'needing', 'needed',
     'try', 'tries', 'trying', 'tried',
-    // 短縮形の残骸
+    // 短縮形の残骸（アポストロフィなし）
     're', 'll', 've', 't', 's', 'd', 'm', 'n',
     'don', 'won', 'didn', 'doesn', 'isn', 'aren', 'wasn', 'weren',
     'couldn', 'wouldn', 'shouldn', 'hasn', 'hadn', 'haven',
     'ain', 'cant', 'wont', 'dont', 'im', 'youre', 'theyre', 'weve', 'thats', 'whats',
+    // 短縮形（アポストロフィ付き）
+    "let's", "don't", "won't", "can't", "isn't", "aren't", "wasn't", "weren't",
+    "doesn't", "didn't", "couldn't", "wouldn't", "shouldn't", "haven't", "hasn't", "hadn't",
+    "it's", "that's", "what's", "there's", "here's", "where's", "who's", "how's",
+    "i'm", "you're", "we're", "they're", "he's", "she's",
+    "i've", "you've", "we've", "they've",
+    "i'll", "you'll", "we'll", "they'll", "he'll", "she'll", "it'll",
+    "i'd", "you'd", "we'd", "they'd", "he'd", "she'd",
+    "ain't", "gonna", "gotta", "wanna", "kinda", "sorta", "outta", "lotta",
     // 感嘆詞・フィラー
     'oh', 'ah', 'uh', 'um', 'er', 'eh', 'hm', 'hmm', 'huh', 'ha', 'haha', 'hehe',
     'wow', 'whoa', 'yay', 'yea', 'yeah', 'yep', 'nope', 'nah',
