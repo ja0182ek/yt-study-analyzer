@@ -6,7 +6,7 @@ import { WeeklyChart } from '@/components/dashboard/WeeklyChart';
 import { VocabPieChart } from '@/components/dashboard/VocabPieChart';
 import { AnalysisReport } from '@/components/dashboard/AnalysisReport';
 import { Card } from '@/components/ui/Card';
-import { analyzeTranscripts } from '@/lib/transcriptAnalyzer';
+import { analyzeTranscripts, countPhraseOccurrences } from '@/lib/transcriptAnalyzer';
 import {
   splitByCache,
   saveTranscriptToCache,
@@ -245,7 +245,7 @@ export default function Dashboard() {
 
         if (phraseResult.success && phraseResult.data) {
           // AIで生成されたフレーズでレポートを更新
-          report.topPhrases = phraseResult.data.slice(0, 5).map(
+          const aiPhrases = phraseResult.data.slice(0, 5).map(
             (p: {
               phrase: string;
               japanese: string;
@@ -254,13 +254,20 @@ export default function Dashboard() {
               categoryEmoji: string;
             }) => ({
               phrase: p.phrase,
-              count: 1, // AI分析では頻度カウントなし
+              count: 1,
               category: p.category,
               categoryEmoji: p.categoryEmoji,
               meaning: p.japanese,
               scene: p.background,
             })
           );
+
+          // 字幕テキストでフレーズの出現回数をカウント
+          const combinedTranscript = transcriptsToAnalyze.join(' ');
+          report.topPhrases = countPhraseOccurrences(aiPhrases, combinedTranscript);
+
+          // カウント順にソート
+          report.topPhrases.sort((a, b) => b.count - a.count);
         }
       } catch (phraseError) {
         console.warn('Failed to analyze phrases with AI:', phraseError);

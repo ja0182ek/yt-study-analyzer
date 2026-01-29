@@ -384,6 +384,38 @@ export function getDefaultPhrases(): PhraseFrequency[] {
 }
 
 /**
+ * 字幕テキスト内でフレーズの出現回数をカウント
+ */
+export function countPhraseOccurrences(
+  phrases: PhraseFrequency[],
+  transcriptText: string
+): PhraseFrequency[] {
+  // テキストを小文字化して正規化
+  const normalizedText = transcriptText
+    .toLowerCase()
+    .replace(/['']/g, "'")
+    .replace(/\s+/g, ' ');
+
+  return phrases.map((phrase) => {
+    // フレーズを小文字化して検索
+    const searchPhrase = phrase.phrase.toLowerCase().replace(/['']/g, "'");
+
+    // フレーズの出現回数をカウント
+    let count = 0;
+    let pos = 0;
+    while ((pos = normalizedText.indexOf(searchPhrase, pos)) !== -1) {
+      count++;
+      pos += searchPhrase.length;
+    }
+
+    return {
+      ...phrase,
+      count: count > 0 ? count : phrase.count, // 見つからなければ元のカウントを維持
+    };
+  });
+}
+
+/**
  * 分析結果からアドバイスを生成
  */
 function generateAdvice(
