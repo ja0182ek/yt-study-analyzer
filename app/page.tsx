@@ -8,6 +8,12 @@ import { AnalysisReport } from '@/components/dashboard/AnalysisReport';
 import { Card } from '@/components/ui/Card';
 import { analyzeTranscripts } from '@/lib/transcriptAnalyzer';
 import {
+  splitByCache,
+  saveTranscriptToCache,
+  saveAnalysisToCache,
+  getAnalysisFromCache,
+} from '@/lib/cache';
+import {
   WatchHistoryEntry,
   WeeklyChartData,
   VideoInfo,
@@ -158,18 +164,31 @@ export default function Dashboard() {
       const totalMinutes = chartData.reduce((sum, d) => sum + d.minutes, 0);
       const totalVideos = chartData.reduce((sum, d) => sum + d.videos, 0);
 
-      // Step 3: 字幕を取得して分析（Invidious API経由）
-      setLoadingStatus('字幕を取得中...');
+      // Step 3: 字幕を取得して分析（キャッシュ優先）
+      setLoadingStatus('字幕を確認中...');
 
       const transcriptsToAnalyze: string[] = [];
       const videoIdsForTranscript = uniqueVideoIds.slice(0, 20);
 
-      if (videoIdsForTranscript.length > 0) {
+      // キャッシュ済みと未取得を分ける
+      const { cached: cachedTranscripts, uncached: uncachedIds } = splitByCache(videoIdsForTranscript);
+
+      // キャッシュ済みの字幕を追加
+      cachedTranscripts.forEach((transcript) => {
+        transcriptsToAnalyze.push(transcript);
+      });
+
+      console.log(`Cache hit: ${cachedTranscripts.size}, Need to fetch: ${uncachedIds.length}`);
+
+      // 未取得の字幕をAPIから取得
+      if (uncachedIds.length > 0) {
+        setLoadingStatus(`字幕を取得中... (${uncachedIds.length}件)`);
+
         try {
           const transcriptResponse = await fetch('/api/transcript', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ videoIds: videoIdsForTranscript }),
+            body: JSON.stringify({ videoIds: uncachedIds }),
           });
 
           const transcriptResult = await transcriptResponse.json();
@@ -179,12 +198,14 @@ export default function Dashboard() {
               (item: { videoId: string; transcript: string | null }) => {
                 if (item.transcript) {
                   transcriptsToAnalyze.push(item.transcript);
+                  // キャッシュに保存
+                  saveTranscriptToCache(item.videoId, item.transcript);
                 }
               }
             );
           }
 
-          console.log(`Fetched ${transcriptsToAnalyze.length} transcripts from ${videoIdsForTranscript.length} videos`);
+          console.log(`Fetched ${transcriptResult.data?.filter((d: { transcript: string | null }) => d.transcript).length || 0} new transcripts`);
         } catch (transcriptError) {
           console.warn('Failed to fetch transcripts:', transcriptError);
         }
@@ -273,13 +294,19 @@ export default function Dashboard() {
         });
 
         const adviceResult = await adviceResponse.json();
+        let adviceData: WeeklyAdvice | null = null;
 
         if (adviceResult.success && adviceResult.data) {
-          setWeeklyAdvice(adviceResult.data);
+          adviceData = adviceResult.data;
+          setWeeklyAdvice(adviceData);
         }
+
+        // 分析結果をキャッシュに保存
+        saveAnalysisToCache(videoIdsForTranscript, report, adviceData);
       } catch (adviceError) {
         console.warn('Failed to generate advice with Gemini:', adviceError);
         // フォールバックはAPI側で処理される
+        // キャッシュには保存しない（adviceなしの場合）
       }
 
       setAnalysisReport(report);
