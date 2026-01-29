@@ -174,13 +174,20 @@ export function AnalysisReport({ report, weeklyAdvice, stats }: AnalysisReportPr
                 key={phrase.phrase}
                 className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
               >
-                <div className="flex items-center space-x-3 mb-3">
-                  <span className="text-2xl">
-                    {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`}
-                  </span>
-                  <span className="text-gray-800 font-bold text-lg">
-                    &quot;{phrase.phrase}&quot;
-                  </span>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-3">
+                    <span className="text-2xl">
+                      {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`}
+                    </span>
+                    <span className="text-gray-800 font-bold text-lg">
+                      &quot;{phrase.phrase}&quot;
+                    </span>
+                  </div>
+                  {phrase.count > 0 && (
+                    <span className="text-sm font-medium text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                      {phrase.count}回
+                    </span>
+                  )}
                 </div>
                 <div className="ml-10 space-y-2">
                   {phrase.category && (
